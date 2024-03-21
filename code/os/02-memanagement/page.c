@@ -137,7 +137,7 @@ void *page_alloc(int npages)
 					page_k++;
 				}
 				page_k--;
-				_set_flag(page_k, PAGE_LAST);
+				_set_flag(page_k, PAGE_LAST);	// 所分配的最后一页标记为PAGE_LAST
 				return (void *)(_alloc_start + i * PAGE_SIZE);
 			}
 		}
@@ -149,20 +149,25 @@ void *page_alloc(int npages)
 /*
  * Free the memory block
  * - p: start address of the memory block
+ * - num_pages: 需要释放的块的数量，当取值为-1时，释放连续的块，
+ * 				当取值大于-1时，释放连续的num_pages个块
  */
-void page_free(void *p)
+void page_free(void *p, uint32_t num_pages)
 {
 	/*
 	 * Assert (TBD) if p is invalid
 	 */
 	if (!p || (uint32_t)p >= _alloc_end) {
+		// 检查输入的指针是否为空 (!p)。如果 p 是 NULL，意味着没有指向有效的内存地址，函数直接返回。
+		// 同时检查 p 的地址是否大于可分配的最大地址，如果大于，则该地址非法，直接返回。
 		return;
 	}
 	/* get the first page descriptor of this memory block */
 	struct Page *page = (struct Page *)HEAP_START;
 	page += ((uint32_t)p - _alloc_start)/ PAGE_SIZE;
+	uint32_t page_count = 0;
 	/* loop and clear all the page descriptors of the memory block */
-	while (!_is_free(page)) {
+	while (!_is_free(page) && (page_count < num_pages || num_pages == -1)) {
 		if (_is_last(page)) {
 			_clear(page);
 			break;
@@ -170,6 +175,7 @@ void page_free(void *p)
 			_clear(page);
 			page++;;
 		}
+		page_count += 1;
 	}
 }
 
@@ -177,11 +183,11 @@ void page_test()
 {
 	void *p = page_alloc(2);
 	printf("p = 0x%x\n", p);
-	//page_free(p);
+	//page_free(p, -1);
 
 	void *p2 = page_alloc(7);
 	printf("p2 = 0x%x\n", p2);
-	page_free(p2);
+	page_free(p2, -1);
 
 	void *p3 = page_alloc(4);
 	printf("p3 = 0x%x\n", p3);
