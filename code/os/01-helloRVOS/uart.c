@@ -118,3 +118,31 @@ void uart_puts(char *s)
 	}
 }
 
+int uart_getc() {
+    // 等待直到接收缓冲区有数据
+    while ((uart_read_reg(LSR) & LSR_RX_READY) == 0);
+    // 读取接收到的字符
+    return uart_read_reg(RHR);
+}
+
+// 读取一行文本，直到遇到回车符
+char* uart_read_line(char* buffer, int max_length) {
+    int count = 0;
+    char ch;
+    while (count < max_length - 1) {
+        ch = uart_getc();
+        if (ch == '\r' || ch == '\n') { // 回车或换行符
+            break;
+        }
+        buffer[count++] = ch;
+        uart_putc(ch); // 回显字符
+    }
+    buffer[count] = '\0'; // 确保字符串以null结尾
+    return buffer;
+}
+
+// 显示字符串到屏幕
+void echo(char* s) {
+    uart_puts(s);
+    uart_puts("\n"); // 在字符串后添加换行符
+}
