@@ -19,6 +19,9 @@
  * Author: Tianfu Ma (matianfu@gmail.com)
  */
 
+// 把代码调整一下，采用指针操作就不担心内存释放问题；
+// 只向外暴露必要的接口，buddy_init中
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,11 +33,11 @@
  * Definitions
  *
  ******************************************************************************/
-#define MAX_ORDER       10
+#define MAX_ORDER       15
 #define MIN_ORDER       4   // 2 ** 4 == 16 bytes
 
 /* the order ranges 0..MAX_ORDER, the largest memblock is 2**(MAX_ORDER) */
-#define POOLSIZE        ((1 << MAX_ORDER) + 64)
+#define POOLSIZE        ((1 << MAX_ORDER) + 1890)
 
 /* blocks are of size 2**i. */
 #define BLOCKSIZE(i)    (1 << (i))
@@ -42,8 +45,10 @@
 /* the address of the buddy of a block from freelists[i]. */
 typedef unsigned long int	uintptr_t;
 typedef unsigned char uint8_t;
+// typedef unsigned long int	uint32_t;
 
-#define _MEMBASE        ((uintptr_t)BUDDY->pool)
+
+#define _MEMBASE        ((uintptr_t)BUDDY->alloc_begin)
 #define _OFFSET(b)      ((uintptr_t)b - _MEMBASE)
 #define _BUDDYOF(b, i)  (_OFFSET(b) ^ (1 << (i)))
 #define BUDDYOF(b, i)   ((pointer*)( _BUDDYOF(b, i) + _MEMBASE))
@@ -63,8 +68,9 @@ typedef struct pointer{
 }pointer;
 
 typedef struct buddy {
-  pointer* freelist[MAX_ORDER + 2];  // one more slot for first block in pool
-  uint8_t pool[POOLSIZE];
+  pointer* freelist[MAX_ORDER + 1];  // one more slot for first block in pool
+  uint64_t* alloc_begin;
+  uint32_t alloc_size;
 } buddy_t;
 
 
@@ -154,34 +160,47 @@ static int find_largest_power_of_two_less_than(int n) {
   return k - 1;
 }
 
+void buddy_init() {
+  // 申请一块地址存放buddy表头和堆
+  uint32_t total_size = sizeof(buddy_t) + POOLSIZE;
+  buddy_t * buddy = (buddy_t*) malloc(total_size);
+  memset(buddy, 0, total_size); //将堆区清零
+  // 初始化buddy表头
+  uint64_t heap_begin_addr = buddy + sizeof(buddy_t);
+  buddy->alloc_begin = (void*)(heap_begin_addr);
+  buddy->alloc_size = POOLSIZE;
 
-void buddy_init(buddy_t * buddy) {
-  
   BUDDY = buddy;
-  memset(buddy, 0, sizeof(buddy_t)); // Adjust the size dynamically based on POOLSIZE
-  if(is_power_of_two(POOLSIZE)){
-    BUDDY->freelist[MAX_ORDER] = (pointer *)BUDDY->pool;
+  
+  if(is_power_of_two(buddy->alloc_size)){
+    BUDDY->freelist[MAX_ORDER] = (pointer *)BUDDY->alloc_begin;
     return;
   }
   int i;
 
   // Find the largest block size that is less than or equal to POOLSIZE
-  int largest_block_order = find_largest_power_of_two_less_than(POOLSIZE);
+  int largest_block_order = find_largest_power_of_two_less_than(buddy->alloc_size);
   int largest_block_size = 1 << largest_block_order;
 
   // Initialize the freelist with the largest block
-  buddy->freelist[largest_block_order] = (pointer *)buddy->pool;
+  buddy->freelist[largest_block_order] = (pointer *)buddy->alloc_begin;
 
   // Calculate the remaining memory after the largest block is allocated
-  int remaining_memory = POOLSIZE - largest_block_size;
+  int remaining_memory = buddy->alloc_size - largest_block_size;
 
   // Split the remaining memory into smaller blocks and add them to the freelist
   for (i = largest_block_order - 1; i >= MIN_ORDER && remaining_memory > 0; --i) {
     int current_block_size = 1 << i;
+    printf("i: %d, current: %x, remain: %x\n", i, current_block_size, remaining_memory);
     while (remaining_memory >= current_block_size) {
-      pointer* block = (pointer*)((uintptr_t)buddy->pool + POOLSIZE - remaining_memory);
-      block->next = buddy->freelist[i];
+      pointer* addr = (pointer*)((uintptr_t)(buddy->alloc_begin) + (uintptr_t)(buddy->alloc_size) - (uintptr_t)(remaining_memory));
+      pointer* block = (pointer*)(addr);
+      // ((pointer*) block) -> next = BUDDY->freelist[i];
+      memset(block, 0, sizeof(pointer));
+      block->next = NULL;
+      // block->next = buddy->freelist[i]->next;
       buddy->freelist[i] = block;
+      
       remaining_memory -= current_block_size;
     }
   }
@@ -189,7 +208,6 @@ void buddy_init(buddy_t * buddy) {
 
 
 void buddy_deinit() {
-
   BUDDY = 0;
 }
 
@@ -225,7 +243,7 @@ static void print_list(int i) {
 
   pointer**p = &BUDDY->freelist[i];
   while (*p != NULL) {
-    printf("    绝对地址：0x%08lx, 相对地址：0x%08lx\n", (uintptr_t) *p, (uintptr_t) *p - (uintptr_t) BUDDY->pool);
+    printf("    绝对地址：0x%08lx, 相对地址：0x%08lx\n", (uintptr_t) *p, (uintptr_t) *p - (uintptr_t) BUDDY->alloc_begin);
     p = (pointer**) *p;
   }
 }
@@ -235,8 +253,8 @@ void print_buddy() {
   int i;
 
   printf("========================================\n");
-  printf("MEMPOOL size: %d\n", POOLSIZE);
-  printf("MEMPOOL start @ 0x%08x\n", (unsigned int) (uintptr_t) BUDDY->pool);
+  printf("MEMPOOL size: 0x%08x\n", POOLSIZE);
+  printf("MEMPOOL start @ 0x%08x\n", (unsigned int) (uintptr_t) BUDDY->alloc_begin);
   printf("total free: %d\n", total_free());
 
   for (i = 0; i <= MAX_ORDER; i++) {
@@ -245,12 +263,12 @@ void print_buddy() {
 }
 
 void main() {
-  buddy_t * buddy = (buddy_t*) malloc(sizeof(buddy_t));
-  buddy_init(buddy);
+
+  buddy_init();
   print_buddy();
   void * p1, *p2;
   p1 = bmalloc(64);
-  p2 = bmalloc(13);
+//   p2 = bmalloc(13);
 
 //   bfree(p2);
   bfree(p1);
@@ -259,4 +277,5 @@ void main() {
 //   p2 = bmalloc(13);
 //   p2 = bmalloc(13);
   print_buddy();
+  printf("end\n");
 }
