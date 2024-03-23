@@ -7,17 +7,15 @@
 extern void uart_init(void);
 extern void page_init(void);
 extern void malloc_init();
+extern void bmalloc_test();
 void start_kernel(void)
 {
 	uart_init();
 	uart_puts("Hello, RVOS!\n");
 
+	// bmalloc_test();
 	page_init();
-	// page_test();
-
-	malloc_init();
-	malloc_test();
-
+	page_test();
 	while (1) {}; // stop here!
 }
 

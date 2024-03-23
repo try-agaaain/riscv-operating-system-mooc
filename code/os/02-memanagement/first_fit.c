@@ -34,18 +34,17 @@ void *malloc(size_t size) {
     }
 
     // 调整请求的大小以满足对齐要求
-    total_size = (size + BLOCK_HEADER_SIZE + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
+    uint32_t size = (size + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1);
 
     struct BlockHeader *current = malloc_start;
     struct BlockHeader *pre = malloc_start;
     while (current) {
         // 检查当前块是否足够大，且未被占用
         printf("current->size: %d\n", current->size);
-        if (current->is_free && current->size >= total_size) {
+        if (current->is_free && current->size >= size) {
             // 如果当前块过大，分割它
-            // malloc分配的每个块包含头部和分配空间两部分，所以这里是size + BLOCK_HEADER_SIZE
             if (current->size > size) {
-                struct BlockHeader *remain_block = (struct BlockHeader *)((uint8_t *)current + total_size);
+                struct BlockHeader *remain_block = (struct BlockHeader *)((uint8_t *)current + BLOCK_HEADER_SIZE + size);
                 remain_block->size = current->size - total_size - BLOCK_HEADER_SIZE;
                 remain_block->next = current->next;
                 remain_block->is_free = 1;
