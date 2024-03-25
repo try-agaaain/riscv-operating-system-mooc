@@ -62,7 +62,7 @@ typedef struct pointer{
 
 typedef struct buddy {
   pointer* freelist[MAX_ORDER + 1];  // one more slot for first block in pool
-  uint32_t* alloc_begin;
+  void* alloc_begin;  // 指向堆区开始位置的指针
   uint32_t alloc_size;
 } buddy_t;
 
@@ -150,7 +150,7 @@ static int find_largest_power_of_two_less_than(int n) {
 void buddy_init() {
 
   BUDDY = (buddy_t*) HEAP_START;
-  BUDDY->alloc_begin = (uint32_t)BUDDY + sizeof(buddy_t) + 1; // one more byte for storing order
+  BUDDY->alloc_begin = (void*)BUDDY + sizeof(buddy_t) + 1; // one more byte for storing order
   BUDDY->alloc_size = HEAP_SIZE - sizeof(buddy_t);
 
   if(is_power_of_two(BUDDY->alloc_size)){
@@ -244,9 +244,9 @@ void bmalloc_test() {
   p1 = bmalloc(3);
   p2 = bmalloc(5);
   p3 = bmalloc(13);
-  print_buddy();
 
   bfree(p1);
   bfree(p2);
   bfree(p3);
+  print_buddy();
 }

@@ -4,21 +4,23 @@
 
 void user_task0(void)
 {
+	int count = 0;
 	uart_puts("Task 0: Created!\n");
 	while (1) {
-		uart_puts("Task 0: Running...\n");
+		printf("Task 0: count is %d, Running...\n", count++);
 		task_delay(DELAY);
-		task_yield();
+		task_yield(0);
 	}
 }
 
 void user_task1(void)
 {
 	uart_puts("Task 1: Created!\n");
+	int count = 0;
 	while (1) {
-		uart_puts("Task 1: Running...\n");
+		printf("Task 1: count is %d, Running...\n", count++);
 		task_delay(DELAY);
-		task_yield();
+		task_yield(1);
 	}
 }
 

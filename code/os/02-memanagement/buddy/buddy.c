@@ -33,7 +33,7 @@
  * Definitions
  *
  ******************************************************************************/
-#define MAX_ORDER       15
+#define MAX_ORDER      10
 #define MIN_ORDER       4   // 2 ** 4 == 16 bytes
 
 /* the order ranges 0..MAX_ORDER, the largest memblock is 2**(MAX_ORDER) */
@@ -166,8 +166,8 @@ void buddy_init() {
   buddy_t * buddy = (buddy_t*) malloc(total_size);
   memset(buddy, 0, total_size); //将堆区清零
   // 初始化buddy表头
-  uint64_t heap_begin_addr = buddy + sizeof(buddy_t);
-  buddy->alloc_begin = (void*)(heap_begin_addr);
+  void* heap_begin_addr = (void*)buddy + sizeof(buddy_t);
+  buddy->alloc_begin = heap_begin_addr;
   buddy->alloc_size = POOLSIZE;
 
   BUDDY = buddy;
@@ -262,7 +262,7 @@ void print_buddy() {
   }
 }
 
-void main() {
+int main() {
 
   buddy_init();
   print_buddy();
@@ -278,4 +278,5 @@ void main() {
 //   p2 = bmalloc(13);
   print_buddy();
   printf("end\n");
+  return 0;
 }
