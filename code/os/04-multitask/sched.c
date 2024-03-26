@@ -57,12 +57,13 @@ void schedule()
  * 	0: success
  * 	-1: if error occured
  */
-int task_create(void (*start_routin)(void))
+int task_create(void (*start_routin)(void* param), void* param)
 {
 	if (_top < MAX_TASKS) {
 		// 将栈的位置初始化为栈顶，栈在使用的过程中栈顶指针下移
 		ctx_tasks[_top].sp = (reg_t) &task_stack[_top][STACK_SIZE];
 		ctx_tasks[_top].ra = (reg_t) start_routin;
+		ctx_tasks[_top].a0 = (reg_t) param;
 		_top++;
 		return 0;
 	} else {
