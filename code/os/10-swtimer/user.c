@@ -25,15 +25,15 @@ void user_task0(void)
 {
 	uart_puts("Task 0: Created!\n");
 
-	struct timer *t1 = timer_create(timer_func, &person, 3);
+	struct timer *t1 = timer_create(timer_func, &person, 3);    // 第3个tick触发
 	if (NULL == t1) {
 		printf("timer_create() failed!\n");
 	}
-	struct timer *t2 = timer_create(timer_func, &person, 5);
+	struct timer *t2 = timer_create(timer_func, &person, 1);    // 第1个个tick触发
 	if (NULL == t2) {
 		printf("timer_create() failed!\n");
 	}
-	struct timer *t3 = timer_create(timer_func, &person, 7);
+	struct timer *t3 = timer_create(timer_func, &person, 6);    // 第6个tick触发
 	if (NULL == t3) {
 		printf("timer_create() failed!\n");
 	}
