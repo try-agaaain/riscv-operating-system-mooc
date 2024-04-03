@@ -79,7 +79,8 @@ struct timer {
 	void *arg;
 	uint32_t timeout_tick;
 };
-extern struct timer *timer_create(void (*handler)(void *arg), void *arg, uint32_t timeout);
-extern void timer_delete(struct timer *timer);
+
+extern struct timer *timer_skiplist_add(void (*handler)(void *arg), void *arg, uint32_t timeout);
+extern void timer_skiplist_delete(struct timer *timer);
 
 #endif /* __OS_H__ */
